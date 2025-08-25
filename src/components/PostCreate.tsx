@@ -4,8 +4,10 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ImageIcon, Send } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import ImageUpload from './ImageUpload';
 
 interface PostCreateProps {
   onPostCreated?: () => void;
@@ -16,23 +18,49 @@ const PostCreate: React.FC<PostCreateProps> = ({ onPostCreated }) => {
   const { toast } = useToast();
   const [content, setContent] = useState('');
   const [isPosting, setIsPosting] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>('');
+
+  const handleImageSelect = (file: File) => {
+    setSelectedImage(file);
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      setImagePreview(e.target?.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleImageRemove = () => {
+    setSelectedImage(null);
+    setImagePreview('');
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!content.trim() || !user) return;
+    if ((!content.trim() && !selectedImage) || !user) return;
 
     setIsPosting(true);
     try {
+      let imageUrl = null;
+
+      // Upload image if selected (simulated - in real app would upload to storage)
+      if (selectedImage) {
+        imageUrl = imagePreview;
+      }
+
       const { error } = await supabase
         .from('posts')
         .insert({
           user_id: user.id,
           content: content.trim(),
+          image_url: imageUrl
         });
 
       if (error) throw error;
 
       setContent('');
+      setSelectedImage(null);
+      setImagePreview('');
       toast({
         title: 'Post created!',
         description: 'Your post has been shared with the community.',
@@ -70,17 +98,55 @@ const PostCreate: React.FC<PostCreateProps> = ({ onPostCreated }) => {
               className="min-h-[100px] resize-none border-none focus-visible:ring-0 text-lg"
               maxLength={280}
             />
+            
+            {/* Image Upload Preview */}
+            {selectedImage && (
+              <div className="mt-3">
+                <ImageUpload
+                  onImageSelect={handleImageSelect}
+                  onImageRemove={handleImageRemove}
+                  preview={imagePreview}
+                  disabled={isPosting}
+                />
+              </div>
+            )}
+            
             <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">
-                {280 - content.length} characters remaining
-              </span>
-              <Button 
-                type="submit" 
-                disabled={!content.trim() || isPosting}
-                className="rounded-full"
-              >
-                {isPosting ? 'Posting...' : 'Post'}
-              </Button>
+              <div className="flex space-x-2">
+                <Button 
+                  type="button"
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => !selectedImage && (document.querySelector('input[type="file"]') as HTMLInputElement)?.click()}
+                  disabled={isPosting}
+                >
+                  <ImageIcon className="w-4 h-4" />
+                </Button>
+                {!selectedImage && (
+                  <div className="hidden">
+                    <ImageUpload
+                      onImageSelect={handleImageSelect}
+                    />
+                  </div>
+                )}
+              </div>
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-muted-foreground">
+                  {280 - content.length} characters remaining
+                </span>
+                <Button 
+                  type="submit" 
+                  disabled={(!content.trim() && !selectedImage) || isPosting}
+                  className="rounded-full"
+                >
+                  {isPosting ? 'Posting...' : (
+                    <>
+                      <Send className="w-4 h-4 mr-1" />
+                      Post
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           </div>
         </div>

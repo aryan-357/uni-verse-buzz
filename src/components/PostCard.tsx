@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Heart, MessageCircle, Repeat2, Share, MoreHorizontal } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import PostComments from './PostComments';
 
 interface PostCardProps {
   post: {
@@ -31,6 +33,8 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
   const [likes, setLikes] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [comments, setComments] = useState(0);
+  const [showComments, setShowComments] = useState(false);
 
   useEffect(() => {
     fetchInteractions();
@@ -59,6 +63,14 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
 
         setIsLiked(!!userLike);
       }
+
+      // Get comment count
+      const { data: commentsData } = await supabase
+        .from('posts')
+        .select('id')
+        .eq('reply_to', post.id);
+
+      setComments(commentsData?.length || 0);
     } catch (error) {
       console.error('Error fetching interactions:', error);
     }
@@ -136,9 +148,10 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
               variant="ghost"
               size="sm"
               className="text-muted-foreground hover:text-primary"
+              onClick={() => setShowComments(true)}
             >
               <MessageCircle className="w-4 h-4 mr-1" />
-              <span>Reply</span>
+              <span>{comments > 0 ? comments : 'Reply'}</span>
             </Button>
             
             <Button
@@ -182,6 +195,19 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
           </div>
         </div>
       </div>
+
+      {/* Comments Dialog */}
+      <Dialog open={showComments} onOpenChange={setShowComments}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Comments</DialogTitle>
+          </DialogHeader>
+          <PostComments
+            postId={post.id}
+            onClose={() => setShowComments(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 };
