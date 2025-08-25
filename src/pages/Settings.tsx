@@ -13,6 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { User, Lock, Bell, Shield, Palette } from 'lucide-react';
+import PasswordUpdateForm from '@/components/PasswordUpdateForm';
 
 const Settings = () => {
   const { user } = useAuth();
@@ -120,7 +121,7 @@ const Settings = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+    <div className="max-w-4xl mx-auto px-4 py-6 space-y-6 animate-fade-in">
       <h1 className="text-2xl font-bold">Settings</h1>
 
       <Tabs defaultValue="profile" className="space-y-4">
@@ -240,18 +241,7 @@ const Settings = () => {
                 <Input value={user?.email || ''} disabled />
               </div>
 
-              <div className="space-y-4">
-                <h3 className="text-lg font-medium">Change Password</h3>
-                <div className="space-y-2">
-                  <Label htmlFor="new-password">New Password</Label>
-                  <Input id="new-password" type="password" />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="confirm-password">Confirm New Password</Label>
-                  <Input id="confirm-password" type="password" />
-                </div>
-                <Button variant="outline">Update Password</Button>
-              </div>
+                <PasswordUpdateForm onUpdate={updatePassword} />
             </CardContent>
           </Card>
         </TabsContent>

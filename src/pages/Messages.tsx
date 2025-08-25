@@ -38,14 +38,16 @@ const Messages = () => {
 
   const fetchConversations = async () => {
     try {
+      if (!user?.id) return;
+      
       const { data, error } = await supabase
         .from('messages')
         .select(`
           *,
-          sender:sender_id (username, display_name, avatar_url),
-          recipient:recipient_id (username, display_name, avatar_url)
+          sender:sender_id!inner (username, display_name, avatar_url),
+          recipient:recipient_id!inner (username, display_name, avatar_url)
         `)
-        .or(`sender_id.eq.${user?.id},recipient_id.eq.${user?.id}`)
+        .or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -77,13 +79,17 @@ const Messages = () => {
   };
 
   const fetchMessages = async (conversationId: string) => {
+    if (!conversationId || !user?.id) return;
+    
     try {
       const userIds = conversationId.split('-');
+      if (userIds.length !== 2) return;
+      
       const { data, error } = await supabase
         .from('messages')
         .select(`
           *,
-          sender:sender_id (username, display_name, avatar_url)
+          sender:sender_id!inner (username, display_name, avatar_url)
         `)
         .or(`and(sender_id.eq.${userIds[0]},recipient_id.eq.${userIds[1]}),and(sender_id.eq.${userIds[1]},recipient_id.eq.${userIds[0]})`)
         .order('created_at', { ascending: true });
@@ -165,10 +171,10 @@ const Messages = () => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto px-4 py-6">
+    <div className="max-w-6xl mx-auto px-4 py-6 animate-fade-in">
       <div className="grid md:grid-cols-3 gap-6 h-[calc(100vh-200px)]">
         {/* Conversations List */}
-        <Card className="flex flex-col">
+        <Card className="flex flex-col animate-slide-up">
           <CardHeader>
             <CardTitle>Messages</CardTitle>
             <div className="space-y-2">
@@ -239,7 +245,7 @@ const Messages = () => {
         {/* Chat Area */}
         <div className="md:col-span-2">
           {selectedConversation ? (
-            <Card className="flex flex-col h-full">
+            <Card className="flex flex-col h-full animate-slide-in-right">
               <CardHeader className="border-b">
                 <div className="flex items-center space-x-3">
                   <Avatar>

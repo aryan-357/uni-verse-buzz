@@ -117,7 +117,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
   };
 
   return (
-    <Card className="p-4">
+    <Card className="p-4 hover-lift animate-fade-in">
       <div className="flex space-x-3">
         <Avatar>
           <AvatarImage src={post.profiles?.avatar_url} />
@@ -147,7 +147,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
             <Button
               variant="ghost"
               size="sm"
-              className="text-muted-foreground hover:text-primary"
+              className="text-muted-foreground hover:text-primary interaction-bounce"
               onClick={() => setShowComments(true)}
             >
               <MessageCircle className="w-4 h-4 mr-1" />
@@ -166,7 +166,7 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
             <Button
               variant="ghost"
               size="sm"
-              className={`text-muted-foreground hover:text-red-500 ${
+              className={`text-muted-foreground hover:text-red-500 interaction-bounce ${
                 isLiked ? 'text-red-500' : ''
               }`}
               onClick={handleLike}

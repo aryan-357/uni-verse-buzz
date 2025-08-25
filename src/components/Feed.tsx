@@ -76,7 +76,7 @@ const Feed = () => {
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4 animate-fade-in">
       <PostCreate onPostCreated={fetchPosts} />
       
       {posts.length === 0 ? (
@@ -84,12 +84,13 @@ const Feed = () => {
           <p className="text-muted-foreground">No posts yet. Be the first to share something!</p>
         </div>
       ) : (
-        posts.map((post) => (
-          <PostCard
-            key={post.id}
-            post={post}
-            onUpdate={fetchPosts}
-          />
+        posts.map((post, index) => (
+          <div key={post.id} className="animate-slide-up" style={{ animationDelay: `${index * 0.1}s` }}>
+            <PostCard
+              post={post}
+              onUpdate={fetchPosts}
+            />
+          </div>
         ))
       )}
     </div>
