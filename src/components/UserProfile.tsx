@@ -10,6 +10,8 @@ import { MessageCircle, Calendar, Users, Shield, CheckCircle } from 'lucide-reac
 import { useToast } from '@/hooks/use-toast';
 import { formatDistanceToNow } from 'date-fns';
 import PostCard from './PostCard';
+import FollowButton from './FollowButton';
+import ReportDialog from './ReportDialog';
 
 interface UserProfileProps {
   userId: string;
@@ -22,12 +24,16 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartConversation }
   const [profile, setProfile] = useState<any>(null);
   const [posts, setPosts] = useState<any[]>([]);
   const [communities, setCommunities] = useState<any[]>([]);
+  const [followers, setFollowers] = useState<any[]>([]);
+  const [following, setFollowing] = useState<any[]>([]);
+  const [stats, setStats] = useState({ followers: 0, following: 0, posts: 0 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchUserProfile();
     fetchUserPosts();
     fetchUserCommunities();
+    fetchFollowData();
   }, [userId]);
 
   const fetchUserProfile = async () => {
@@ -88,6 +94,42 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartConversation }
     }
   };
 
+  const fetchFollowData = async () => {
+    try {
+      // Fetch followers
+      const { data: followersData, error: followersError } = await supabase
+        .from('follows')
+        .select(`
+          follower_id,
+          profiles:follower_id (username, display_name, avatar_url)
+        `)
+        .eq('following_id', userId);
+
+      if (followersError) throw followersError;
+
+      // Fetch following
+      const { data: followingData, error: followingError } = await supabase
+        .from('follows')
+        .select(`
+          following_id,
+          profiles:following_id (username, display_name, avatar_url)
+        `)
+        .eq('follower_id', userId);
+
+      if (followingError) throw followingError;
+
+      setFollowers(followersData || []);
+      setFollowing(followingData || []);
+      setStats({
+        followers: followersData?.length || 0,
+        following: followingData?.length || 0,
+        posts: posts.length
+      });
+    } catch (error: any) {
+      console.error('Error fetching follow data:', error);
+    }
+  };
+
   if (loading) {
     return (
       <div className="max-w-4xl mx-auto px-4 py-6">
@@ -141,13 +183,17 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartConversation }
                 </div>
                 
                 {!isOwnProfile && (
-                  <Button
-                    onClick={() => onStartConversation?.(profile)}
-                    className="flex items-center space-x-2"
-                  >
-                    <MessageCircle className="w-4 h-4" />
-                    <span>Message</span>
-                  </Button>
+                  <div className="flex space-x-2">
+                    <FollowButton targetUserId={profile.user_id} />
+                    <Button
+                      onClick={() => onStartConversation?.(profile)}
+                      className="flex items-center space-x-2"
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                      <span>Message</span>
+                    </Button>
+                    <ReportDialog reportedUserId={profile.user_id} />
+                  </div>
                 )}
               </div>
               
@@ -163,6 +209,21 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartConversation }
                 <p className="text-muted-foreground mb-4">{profile.bio}</p>
               )}
               
+              <div className="flex justify-center sm:justify-start items-center space-x-6 text-sm text-muted-foreground mb-4">
+                <div className="text-center">
+                  <p className="text-lg font-semibold text-foreground">{stats.posts}</p>
+                  <p>Posts</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-lg font-semibold text-foreground">{stats.followers}</p>
+                  <p>Followers</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-lg font-semibold text-foreground">{stats.following}</p>
+                  <p>Following</p>
+                </div>
+              </div>
+              
               <div className="flex justify-center sm:justify-start items-center space-x-4 text-sm text-muted-foreground">
                 <div className="flex items-center space-x-1">
                   <Calendar className="w-4 h-4" />
@@ -176,10 +237,11 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartConversation }
 
       {/* Content Tabs */}
       <Tabs defaultValue="posts" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="posts">Posts ({posts.length})</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="posts">Posts ({stats.posts})</TabsTrigger>
+          <TabsTrigger value="followers">Followers ({stats.followers})</TabsTrigger>
+          <TabsTrigger value="following">Following ({stats.following})</TabsTrigger>
           <TabsTrigger value="communities">Communities ({communities.length})</TabsTrigger>
-          <TabsTrigger value="activity">Activity</TabsTrigger>
         </TabsList>
 
         <TabsContent value="posts" className="space-y-4">
@@ -200,6 +262,82 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartConversation }
                 onUpdate={fetchUserPosts}
               />
             ))
+          )}
+        </TabsContent>
+
+        <TabsContent value="followers" className="space-y-4">
+          {followers.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <Users className="w-12 h-12 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-medium mb-2">No followers yet</h3>
+                <p className="text-muted-foreground text-center">
+                  {isOwnProfile ? "You don't have any followers yet." : "This user doesn't have any followers yet."}
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4">
+              {followers.map((follower) => (
+                <Card key={follower.follower_id}>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <Avatar>
+                          <AvatarImage src={follower.profiles?.avatar_url} />
+                          <AvatarFallback>
+                            {follower.profiles?.display_name?.charAt(0)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="font-medium">{follower.profiles?.display_name}</p>
+                          <p className="text-sm text-muted-foreground">@{follower.profiles?.username}</p>
+                        </div>
+                      </div>
+                      <FollowButton targetUserId={follower.follower_id} size="sm" />
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="following" className="space-y-4">
+          {following.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <Users className="w-12 h-12 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-medium mb-2">Not following anyone</h3>
+                <p className="text-muted-foreground text-center">
+                  {isOwnProfile ? "You're not following anyone yet." : "This user isn't following anyone yet."}
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4">
+              {following.map((followed) => (
+                <Card key={followed.following_id}>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-3">
+                        <Avatar>
+                          <AvatarImage src={followed.profiles?.avatar_url} />
+                          <AvatarFallback>
+                            {followed.profiles?.display_name?.charAt(0)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="font-medium">{followed.profiles?.display_name}</p>
+                          <p className="text-sm text-muted-foreground">@{followed.profiles?.username}</p>
+                        </div>
+                      </div>
+                      <FollowButton targetUserId={followed.following_id} size="sm" />
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           )}
         </TabsContent>
 
@@ -235,17 +373,6 @@ const UserProfile: React.FC<UserProfileProps> = ({ userId, onStartConversation }
               ))}
             </div>
           )}
-        </TabsContent>
-
-        <TabsContent value="activity" className="space-y-4">
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <h3 className="text-lg font-medium mb-2">Activity Timeline</h3>
-              <p className="text-muted-foreground text-center">
-                Activity tracking coming soon...
-              </p>
-            </CardContent>
-          </Card>
         </TabsContent>
       </Tabs>
     </div>

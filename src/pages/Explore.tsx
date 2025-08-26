@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -7,16 +8,30 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import PostCard from '@/components/PostCard';
-import { Search } from 'lucide-react';
+import { Heart, MessageCircle, Users, UserPlus, Bell, Search, CheckCircle } from 'lucide-react';
+import FollowButton from '@/components/FollowButton';
 import { useToast } from '@/hooks/use-toast';
 
 const Explore = () => {
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
-  const [searchResults, setSearchResults] = useState<any>({ posts: [], users: [], communities: [] });
+  const [searchResults, setSearchResults] = useState<{
+    posts: any[];
+    users: any[];
+  }>({ posts: [], users: [] });
   const [trendingPosts, setTrendingPosts] = useState<any[]>([]);
   const [suggestedUsers, setSuggestedUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    if (searchTerm.trim()) {
+      performSearch();
+    } else {
+      setSearchResults({ posts: [], users: [] });
+      fetchTrendingContent();
+    }
+  }, [searchTerm]);
 
   useEffect(() => {
     fetchTrendingContent();
@@ -55,7 +70,7 @@ const Explore = () => {
       const { data, error } = await supabase
         .from('profiles')
         .select('*')
-        .eq('is_verified', true)
+        .neq('user_id', user?.id)
         .limit(5);
 
       if (error) throw error;
@@ -65,13 +80,13 @@ const Explore = () => {
     }
   };
 
-  const handleSearch = async () => {
+  const performSearch = async () => {
     if (!searchTerm.trim()) return;
 
     setLoading(true);
     try {
       // Search posts
-      const { data: posts } = await supabase
+      const { data: posts, error: postsError } = await supabase
         .from('posts')
         .select(`
           *,
@@ -80,26 +95,21 @@ const Explore = () => {
         .ilike('content', `%${searchTerm}%`)
         .limit(10);
 
+      if (postsError) throw postsError;
+
       // Search users
-      const { data: users } = await supabase
+      const { data: users, error: usersError } = await supabase
         .from('profiles')
         .select('*')
         .or(`username.ilike.%${searchTerm}%,display_name.ilike.%${searchTerm}%`)
         .limit(10);
 
-      // Search communities
-      const { data: communities } = await supabase
-        .from('communities')
-        .select('*')
-        .or(`name.ilike.%${searchTerm}%,description.ilike.%${searchTerm}%`)
-        .limit(10);
+      if (usersError) throw usersError;
 
       setSearchResults({
         posts: posts || [],
-        users: users || [],
-        communities: communities || []
+        users: users || []
       });
-
     } catch (error: any) {
       toast({
         variant: 'destructive',
@@ -118,12 +128,12 @@ const Explore = () => {
         
         <div className="flex space-x-2">
           <Input
-            placeholder="Search posts, users, communities..."
+            placeholder="Search posts, users..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+            onKeyDown={(e) => e.key === 'Enter' && performSearch()}
           />
-          <Button onClick={handleSearch} disabled={loading}>
+          <Button onClick={performSearch} disabled={loading}>
             <Search className="w-4 h-4" />
           </Button>
         </div>
@@ -134,51 +144,63 @@ const Explore = () => {
           <TabsList>
             <TabsTrigger value="posts">Posts ({searchResults.posts.length})</TabsTrigger>
             <TabsTrigger value="users">Users ({searchResults.users.length})</TabsTrigger>
-            <TabsTrigger value="communities">Communities ({searchResults.communities.length})</TabsTrigger>
           </TabsList>
 
           <TabsContent value="posts" className="space-y-4">
-            {searchResults.posts.map((post: any) => (
-              <PostCard key={post.id} post={post} />
-            ))}
+            {loading ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              </div>
+            ) : searchResults.posts.length === 0 ? (
+              <div className="text-center py-8">
+                <Search className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-lg font-medium mb-2">No posts found</h3>
+                <p className="text-muted-foreground">Try different keywords or check your spelling.</p>
+              </div>
+            ) : (
+              searchResults.posts.map((post: any) => (
+                <PostCard key={post.id} post={post} />
+              ))
+            )}
           </TabsContent>
 
           <TabsContent value="users" className="space-y-4">
-            {searchResults.users.map((user: any) => (
-              <Card key={user.id}>
-                <CardContent className="flex items-center space-x-4 p-4">
-                  <Avatar>
-                    <AvatarImage src={user.avatar_url} />
-                    <AvatarFallback>{user.display_name?.charAt(0)}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-2">
-                      <h3 className="font-semibold">{user.display_name}</h3>
-                      {user.is_verified && <Badge variant="secondary">Verified</Badge>}
+            {loading ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              </div>
+            ) : searchResults.users.length === 0 ? (
+              <div className="text-center py-8">
+                <Search className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                <h3 className="text-lg font-medium mb-2">No users found</h3>
+                <p className="text-muted-foreground">Try different keywords or check your spelling.</p>
+              </div>
+            ) : (
+              searchResults.users.map((user: any) => (
+                <Card key={user.id} className="hover:shadow-md transition-shadow">
+                  <CardContent className="flex items-center space-x-4 p-4">
+                    <Avatar>
+                      <AvatarImage src={user.avatar_url} />
+                      <AvatarFallback>{user.display_name?.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2">
+                        <h3 className="font-semibold">{user.display_name}</h3>
+                        {user.is_verified && (
+                          <CheckCircle className="w-4 h-4 text-blue-500" />
+                        )}
+                        {user.user_type === 'staff' && (
+                          <Badge variant="secondary">Staff</Badge>
+                        )}
+                      </div>
+                      <p className="text-muted-foreground">@{user.username}</p>
+                      {user.bio && <p className="text-sm mt-1">{user.bio}</p>}
                     </div>
-                    <p className="text-muted-foreground">@{user.username}</p>
-                    <Badge variant="outline">{user.user_type}</Badge>
-                  </div>
-                  <Button variant="outline">Follow</Button>
-                </CardContent>
-              </Card>
-            ))}
-          </TabsContent>
-
-          <TabsContent value="communities" className="space-y-4">
-            {searchResults.communities.map((community: any) => (
-              <Card key={community.id}>
-                <CardContent className="p-4">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="font-semibold">{community.name}</h3>
-                      <p className="text-muted-foreground">{community.description}</p>
-                    </div>
-                    <Button variant="outline">Join</Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                    <FollowButton targetUserId={user.user_id} size="sm" />
+                  </CardContent>
+                </Card>
+              ))
+            )}
           </TabsContent>
         </Tabs>
       ) : (
@@ -212,7 +234,9 @@ const Explore = () => {
                       <p className="text-sm font-medium truncate">{user.display_name}</p>
                       <p className="text-xs text-muted-foreground truncate">@{user.username}</p>
                     </div>
-                    <Button size="sm" variant="outline">Follow</Button>
+                    <Button size="sm" variant="outline">
+                      <FollowButton targetUserId={user.user_id} size="sm" />
+                    </Button>
                   </div>
                 ))}
               </CardContent>

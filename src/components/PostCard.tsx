@@ -2,8 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Heart, MessageCircle, Repeat2, Share, MoreHorizontal } from 'lucide-react';
+import FollowButton from './FollowButton';
+import ReportDialog from './ReportDialog';
 import { formatDistanceToNow } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -127,18 +130,39 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
         </Avatar>
         
         <div className="flex-1">
-          <div className="flex items-center space-x-2 mb-1">
-            <span className="font-semibold">{post.profiles?.display_name || 'Anonymous'}</span>
-            <span className="text-muted-foreground">@{post.profiles?.username}</span>
-            {post.profiles?.is_verified && (
-              <div className="w-4 h-4 bg-primary rounded-full flex items-center justify-center">
-                <div className="w-2 h-2 bg-primary-foreground rounded-full"></div>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <Avatar className="cursor-pointer">
+                <AvatarImage src={post.profiles?.avatar_url} />
+                <AvatarFallback>
+                  {post.profiles?.display_name?.charAt(0) || 'U'}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1">
+                <div className="flex items-center space-x-2">
+                  <h3 className="font-semibold cursor-pointer hover:underline">
+                    {post.profiles?.display_name || 'Unknown User'}
+                  </h3>
+                  <span className="text-muted-foreground text-sm">
+                    @{post.profiles?.username || 'unknown'}
+                  </span>
+                  {post.profiles?.is_verified && (
+                    <div className="w-4 h-4 bg-primary rounded-full flex items-center justify-center">
+                      <div className="w-2 h-2 bg-primary-foreground rounded-full"></div>
+                    </div>
+                  )}
+                  {post.profiles?.user_type === 'staff' && (
+                    <Badge variant="secondary">Staff</Badge>
+                  )}
+                  <span className="text-muted-foreground text-sm">
+                    {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
+                  </span>
+                </div>
               </div>
-            )}
-            <span className="text-muted-foreground">·</span>
-            <span className="text-muted-foreground text-sm">
-              {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
-            </span>
+            </div>
+            <div className="flex items-center space-x-2">
+              <FollowButton targetUserId={post.user_id} size="sm" />
+            </div>
           </div>
           
           <p className="text-foreground mb-3">{post.content}</p>
@@ -190,7 +214,11 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
               size="sm"
               className="text-muted-foreground hover:text-primary ml-auto"
             >
-              <MoreHorizontal className="w-4 h-4" />
+              <ReportDialog 
+                reportedPostId={post.id} 
+                reportedUserId={post.user_id}
+                trigger={<MoreHorizontal className="w-4 h-4" />}
+              />
             </Button>
           </div>
         </div>

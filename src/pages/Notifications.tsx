@@ -6,50 +6,62 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Heart, MessageCircle, Users, UserPlus, Bell } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { useToast } from '@/hooks/use-toast';
 
 const Notifications = () => {
-  const [notifications, setNotifications] = useState([
-    {
-      id: '1',
-      type: 'like',
-      actor: { name: 'Sarah Johnson', username: 'sarah_j', avatar: '' },
-      content: 'liked your post about the upcoming school festival',
-      createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
-      read: false
-    },
-    {
-      id: '2',
-      type: 'comment',
-      actor: { name: 'Mike Chen', username: 'mike_c', avatar: '' },
-      content: 'commented on your post: "This looks amazing! Can\'t wait to participate."',
-      createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000),
-      read: false
-    },
-    {
-      id: '3',
-      type: 'follow',
-      actor: { name: 'Emma Wilson', username: 'emma_w', avatar: '' },
-      content: 'started following you',
-      createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
-      read: true
-    },
-    {
-      id: '4',
-      type: 'community',
-      actor: { name: 'Photography Club', username: 'photo_club', avatar: '' },
-      content: 'You have been added to Photography Club',
-      createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
-      read: true
-    },
-    {
-      id: '5',
-      type: 'mention',
-      actor: { name: 'Alex Rodriguez', username: 'alex_r', avatar: '' },
-      content: 'mentioned you in a post about the science fair',
-      createdAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
-      read: true
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (user) {
+      fetchNotifications();
+      setupRealtimeSubscription();
     }
-  ]);
+  }, [user]);
+
+  const fetchNotifications = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('*')
+        .eq('user_id', user?.id)
+        .order('created_at', { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+      setNotifications(data || []);
+    } catch (error: any) {
+      console.error('Error fetching notifications:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const setupRealtimeSubscription = () => {
+    const channel = supabase
+      .channel('notifications_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'notifications',
+          filter: `user_id=eq.${user?.id}`
+        },
+        (payload) => {
+          setNotifications(prev => [payload.new as any, ...prev]);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  };
 
   const getNotificationIcon = (type: string) => {
     switch (type) {
@@ -67,18 +79,51 @@ const Notifications = () => {
     }
   };
 
-  const markAsRead = (notificationId: string) => {
-    setNotifications(prev =>
-      prev.map(n =>
-        n.id === notificationId ? { ...n, read: true } : n
-      )
-    );
+  const markAsRead = async (notificationId: string) => {
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('id', notificationId)
+        .eq('user_id', user?.id);
+
+      if (error) throw error;
+
+      setNotifications(prev =>
+        prev.map(n =>
+          n.id === notificationId ? { ...n, read: true } : n
+        )
+      );
+    } catch (error: any) {
+      console.error('Error marking notification as read:', error);
+    }
   };
 
-  const markAllAsRead = () => {
-    setNotifications(prev =>
-      prev.map(n => ({ ...n, read: true }))
-    );
+  const markAllAsRead = async () => {
+    try {
+      const { error } = await supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('user_id', user?.id)
+        .eq('read', false);
+
+      if (error) throw error;
+
+      setNotifications(prev =>
+        prev.map(n => ({ ...n, read: true }))
+      );
+
+      toast({
+        title: 'All notifications marked as read',
+      });
+    } catch (error: any) {
+      console.error('Error marking all as read:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error marking notifications as read',
+        description: error.message,
+      });
+    }
   };
 
   const unreadCount = notifications.filter(n => !n.read).length;
@@ -87,31 +132,27 @@ const Notifications = () => {
 
   const NotificationItem = ({ notification }: { notification: any }) => (
     <Card 
-      className={`cursor-pointer transition-colors ${
+      className={`cursor-pointer transition-colors animate-fade-in ${
         !notification.read ? 'bg-accent/50 border-l-4 border-l-primary' : 'hover:bg-muted/50'
       }`}
       onClick={() => markAsRead(notification.id)}
     >
       <CardContent className="p-4">
         <div className="flex space-x-3">
-          <Avatar className="h-10 w-10">
-            <AvatarImage src={notification.actor.avatar} />
-            <AvatarFallback>
-              {notification.actor.name.split(' ').map((n: string) => n[0]).join('')}
-            </AvatarFallback>
-          </Avatar>
+          <div className="flex items-center space-x-2">
+            {getNotificationIcon(notification.type)}
+          </div>
           
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between">
               <div className="flex items-center space-x-2">
-                {getNotificationIcon(notification.type)}
-                <span className="font-medium">{notification.actor.name}</span>
+                <span className="font-medium">{notification.title}</span>
                 {!notification.read && (
                   <div className="w-2 h-2 bg-primary rounded-full"></div>
                 )}
               </div>
               <span className="text-xs text-muted-foreground">
-                {formatDistanceToNow(notification.createdAt, { addSuffix: true })}
+                {formatDistanceToNow(new Date(notification.created_at), { addSuffix: true })}
               </span>
             </div>
             
@@ -124,8 +165,18 @@ const Notifications = () => {
     </Card>
   );
 
+  if (loading) {
+    return (
+      <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+        <div className="flex justify-center py-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
+    <div className="max-w-4xl mx-auto px-4 py-6 space-y-6 animate-fade-in">
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold">Notifications</h1>
