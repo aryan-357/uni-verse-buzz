@@ -7,6 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Heart, MessageCircle, Repeat2, Share, MoreHorizontal } from 'lucide-react';
 import FollowButton from './FollowButton';
 import ReportDialog from './ReportDialog';
+import ClickableUsername from './ClickableUsername';
 import { formatDistanceToNow } from 'date-fns';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
@@ -140,9 +141,12 @@ const PostCard: React.FC<PostCardProps> = ({ post, onUpdate }) => {
               </Avatar>
               <div className="flex-1">
                 <div className="flex items-center space-x-2">
-                  <h3 className="font-semibold cursor-pointer hover:underline">
-                    {post.profiles?.display_name || 'Unknown User'}
-                  </h3>
+                  <ClickableUsername 
+                    userId={post.user_id}
+                    username={post.profiles?.username || 'unknown'}
+                    displayName={post.profiles?.display_name || 'Unknown User'}
+                    className="font-semibold"
+                  />
                   <span className="text-muted-foreground text-sm">
                     @{post.profiles?.username || 'unknown'}
                   </span>

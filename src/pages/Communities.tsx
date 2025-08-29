@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Users, Plus, Crown, Shield, User } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Link } from 'react-router-dom';
 
 const Communities = () => {
   const { user } = useAuth();
@@ -236,59 +237,59 @@ const Communities = () => {
         <TabsContent value="discover" className="space-y-4">
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
             {communities.map((community) => (
-              <Card key={community.id} className="cursor-pointer hover:shadow-md transition-shadow"
-                    onClick={() => {
-                      setSelectedCommunity(community);
-                      fetchCommunityMembers(community.id);
-                    }}>
-                <CardHeader>
-                  <CardTitle className="flex items-center space-x-2">
-                    <Users className="w-5 h-5" />
-                    <span>{community.name}</span>
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground mb-4">{community.description}</p>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <Avatar className="h-6 w-6">
-                        <AvatarImage src={community.creator?.avatar_url} />
-                        <AvatarFallback>{community.creator?.display_name?.charAt(0)}</AvatarFallback>
-                      </Avatar>
-                      <span className="text-sm text-muted-foreground">
-                        by {community.creator?.display_name}
-                      </span>
+              <Link key={community.id} to={`/community/${community.id}`}>
+                <Card className="cursor-pointer hover:shadow-md transition-shadow">
+                  <CardHeader>
+                    <CardTitle className="flex items-center space-x-2">
+                      <Users className="w-5 h-5" />
+                      <span>{community.name}</span>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-muted-foreground mb-4">{community.description}</p>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <Avatar className="h-6 w-6">
+                          <AvatarImage src={community.creator?.avatar_url} />
+                          <AvatarFallback>{community.creator?.display_name?.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        <span className="text-sm text-muted-foreground">
+                          by {community.creator?.display_name}
+                        </span>
+                      </div>
+                      <Badge variant="outline">
+                        {community.community_members?.length || 0} members
+                      </Badge>
                     </div>
-                    <Badge variant="outline">
-                      {community.community_members?.length || 0} members
-                    </Badge>
-                  </div>
-                  <div className="mt-4">
-                    {isUserMember(community.id) ? (
-                      <Button 
-                        variant="destructive" 
-                        size="sm" 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          leaveCommunity(community.id);
-                        }}
-                      >
-                        Leave
-                      </Button>
-                    ) : (
-                      <Button 
-                        size="sm" 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          joinCommunity(community.id);
-                        }}
-                      >
-                        Join
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
+                    <div className="mt-4">
+                      {isUserMember(community.id) ? (
+                        <Button 
+                          variant="destructive" 
+                          size="sm" 
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            leaveCommunity(community.id);
+                          }}
+                        >
+                          Leave
+                        </Button>
+                      ) : (
+                        <Button 
+                          size="sm" 
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            joinCommunity(community.id);
+                          }}
+                        >
+                          Join
+                        </Button>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </Link>
             ))}
           </div>
         </TabsContent>

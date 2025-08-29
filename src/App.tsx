@@ -12,9 +12,12 @@ import Messages from "./pages/Messages";
 import Communities from "./pages/Communities";
 import Settings from "./pages/Settings";
 import Notifications from "./pages/Notifications";
-import Moderation from "./pages/Moderation";
+import EnhancedModeration from "./pages/EnhancedModeration";
 import NotFound from "./pages/NotFound";
 import Profile from "./pages/Profile";
+import UserProfilePage from "./pages/UserProfilePage";
+import CommunityPage from "./pages/CommunityPage";
+import Announcements from "./pages/Announcements";
 
 const queryClient = new QueryClient();
 
@@ -31,10 +34,13 @@ const App = () => (
             <Route path="/explore" element={<Layout><Explore /></Layout>} />
             <Route path="/messages" element={<Layout><Messages /></Layout>} />
             <Route path="/communities" element={<Layout><Communities /></Layout>} />
+            <Route path="/community/:id" element={<Layout><CommunityPage /></Layout>} />
+            <Route path="/announcements" element={<Layout><Announcements /></Layout>} />
             <Route path="/settings" element={<Layout><Settings /></Layout>} />
             <Route path="/notifications" element={<Layout><Notifications /></Layout>} />
-            <Route path="/moderation" element={<Layout><Moderation /></Layout>} />
+            <Route path="/moderation" element={<Layout><EnhancedModeration /></Layout>} />
             <Route path="/profile" element={<Layout><Profile /></Layout>} />
+            <Route path="/profile/:userId" element={<Layout><UserProfilePage /></Layout>} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
