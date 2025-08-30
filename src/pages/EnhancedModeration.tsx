@@ -182,6 +182,16 @@ const EnhancedModeration = () => {
 
       if (error) throw error;
 
+      // Create moderation log
+      await supabase
+        .from('user_moderation')
+        .insert({
+          user_id: posts.find(p => p.id === postId)?.user_id,
+          moderator_id: user?.id,
+          action_type: 'delete_post',
+          reason: 'Post deleted by moderator'
+        });
+
       toast({
         title: 'Post deleted',
         description: 'The post has been removed.',

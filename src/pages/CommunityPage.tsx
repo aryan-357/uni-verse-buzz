@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Users, MessageSquare, Send, Pin } from 'lucide-react';
 import PostCard from '@/components/PostCard';
+import CommunityAdminPanel from '@/components/CommunityAdminPanel';
 
 const CommunityPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -25,6 +26,10 @@ const CommunityPage = () => {
   const [newPostTitle, setNewPostTitle] = useState('');
   const [newPostContent, setNewPostContent] = useState('');
   const [isPosting, setIsPosting] = useState(false);
+  
+  const isCreator = community?.created_by === user?.id;
+  const currentMember = members.find(m => m.user_id === user?.id);
+  const memberRole = currentMember?.role || 'member';
 
   const fetchCommunityData = async () => {
     if (!id) return;
@@ -52,7 +57,7 @@ const CommunityPage = () => {
         .from('community_posts')
         .select(`
           *,
-          profiles:user_id (
+          profiles!community_posts_user_id_fkey (
             username,
             display_name,
             avatar_url,
@@ -72,7 +77,7 @@ const CommunityPage = () => {
         .from('community_members')
         .select(`
           *,
-          profiles:user_id (
+          profiles!community_members_user_id_fkey (
             username,
             display_name,
             avatar_url,
@@ -240,7 +245,17 @@ const CommunityPage = () => {
               </Button>
             )}
             {isMember && (
-              <Badge variant="default">Member</Badge>
+              <div className="flex gap-2">
+                <Badge variant="default">{memberRole}</Badge>
+                {(isCreator || memberRole === 'admin') && (
+                  <CommunityAdminPanel
+                    community={community}
+                    members={members}
+                    isCreator={isCreator}
+                    onRefresh={fetchCommunityData}
+                  />
+                )}
+              </div>
             )}
           </div>
         </div>

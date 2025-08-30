@@ -18,6 +18,7 @@ import Profile from "./pages/Profile";
 import UserProfilePage from "./pages/UserProfilePage";
 import CommunityPage from "./pages/CommunityPage";
 import Announcements from "./pages/Announcements";
+import OfficialAnnouncements from "./pages/OfficialAnnouncements";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +37,7 @@ const App = () => (
             <Route path="/communities" element={<Layout><Communities /></Layout>} />
             <Route path="/community/:id" element={<Layout><CommunityPage /></Layout>} />
             <Route path="/announcements" element={<Layout><Announcements /></Layout>} />
+            <Route path="/official" element={<Layout><OfficialAnnouncements /></Layout>} />
             <Route path="/settings" element={<Layout><Settings /></Layout>} />
             <Route path="/notifications" element={<Layout><Notifications /></Layout>} />
             <Route path="/moderation" element={<Layout><EnhancedModeration /></Layout>} />

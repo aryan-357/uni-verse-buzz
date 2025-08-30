@@ -118,7 +118,13 @@ const Messages = () => {
     if (!newMessage.trim() || !selectedConversation) return;
 
     try {
-      const recipientId = selectedConversation.id.split('-').find((id: string) => id !== user?.id);
+      const conversationUserIds = selectedConversation.id.split('-');
+      const recipientId = conversationUserIds.find((id: string) => id !== user?.id);
+      
+      // Ensure recipientId is a valid UUID
+      if (!recipientId || recipientId.length < 36) {
+        throw new Error('Invalid recipient ID');
+      }
       
       const { error } = await supabase
         .from('messages')

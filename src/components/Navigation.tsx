@@ -1,7 +1,7 @@
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Home, MessageCircle, Users, Settings, LogOut, Search, Bell, Megaphone, User, Shield } from 'lucide-react';
+import { Home, MessageCircle, Users, Settings, LogOut, Search, Bell, Megaphone, User, Shield, FileText } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const Navigation = () => {
@@ -13,7 +13,8 @@ const Navigation = () => {
     { icon: Bell, label: 'Notifications', href: '/notifications' },
     { icon: MessageCircle, label: 'Messages', href: '/messages' },
     { icon: Users, label: 'Communities', href: '/communities' },
-    { icon: Megaphone, label: 'Announcements', href: '/announcements' },
+    { icon: FileText, label: 'Announcements', href: '/announcements' },
+    { icon: Megaphone, label: 'Official', href: '/official' },
     { icon: User, label: 'Profile', href: '/profile' },
     { icon: Shield, label: 'Moderation', href: '/moderation' },
     { icon: Settings, label: 'Settings', href: '/settings' },

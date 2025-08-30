@@ -14,10 +14,12 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { User, Lock, Bell, Shield, Palette } from 'lucide-react';
 import PasswordUpdateForm from '@/components/PasswordUpdateForm';
+import { useTheme } from '@/components/ThemeProvider';
 
 const Settings = () => {
   const { user } = useAuth();
   const { toast } = useToast();
+  const { theme, setTheme } = useTheme();
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(false);
   const [profileForm, setProfileForm] = useState({
@@ -99,6 +101,49 @@ const Settings = () => {
     }
   };
 
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !user) return;
+
+    try {
+      setLoading(true);
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}-avatar.${fileExt}`;
+      const filePath = `${user.id}/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('avatars')
+        .upload(filePath, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data } = supabase.storage
+        .from('avatars')
+        .getPublicUrl(filePath);
+
+      const { error: updateError } = await supabase
+        .from('profiles')
+        .update({ avatar_url: data.publicUrl })
+        .eq('user_id', user.id);
+
+      if (updateError) throw updateError;
+
+      await fetchProfile();
+      toast({
+        title: 'Avatar updated!',
+        description: 'Your profile picture has been updated successfully.',
+      });
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Error updating avatar',
+        description: error.message,
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const updatePassword = async (currentPassword: string, newPassword: string) => {
     try {
       const { error } = await supabase.auth.updateUser({
@@ -162,7 +207,16 @@ const Settings = () => {
                   </AvatarFallback>
                 </Avatar>
                 <div className="space-y-2">
-                  <Button variant="outline">Change Avatar</Button>
+                  <Button variant="outline" onClick={() => document.getElementById('avatar-upload')?.click()}>
+                    Change Avatar
+                  </Button>
+                  <input
+                    id="avatar-upload"
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleAvatarUpload}
+                  />
                   <div className="flex space-x-2">
                     {profile?.is_verified && <Badge>Verified</Badge>}
                     {profile?.is_moderator && <Badge variant="secondary">Moderator</Badge>}
@@ -332,7 +386,7 @@ const Settings = () => {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label>Theme</Label>
-                <Select defaultValue="system">
+                <Select value={theme} onValueChange={setTheme}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>

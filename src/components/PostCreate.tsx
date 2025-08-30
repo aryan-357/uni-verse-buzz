@@ -43,9 +43,24 @@ const PostCreate: React.FC<PostCreateProps> = ({ onPostCreated }) => {
     try {
       let imageUrl = null;
 
-      // Upload image if selected (simulated - in real app would upload to storage)
+      // Upload image if selected
       if (selectedImage) {
-        imageUrl = imagePreview;
+        const fileExt = selectedImage.name.split('.').pop();
+        const fileName = `${Math.random()}.${fileExt}`;
+        const filePath = `${user.id}/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('avatars')
+          .upload(filePath, selectedImage);
+
+        if (uploadError) throw uploadError;
+
+        // Get public URL
+        const { data } = supabase.storage
+          .from('avatars')
+          .getPublicUrl(filePath);
+        
+        imageUrl = data.publicUrl;
       }
 
       const { error } = await supabase
