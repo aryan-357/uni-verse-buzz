@@ -480,13 +480,13 @@ export type Database = {
     Functions: {
       create_notification: {
         Args: {
-          content: string
-          data?: Json
-          title: string
-          type: string
-          user_id: string
+          p_content: string
+          p_data?: Json
+          p_title: string
+          p_type: string
+          p_user_id: string
         }
-        Returns: undefined
+        Returns: string
       }
     }
     Enums: {
